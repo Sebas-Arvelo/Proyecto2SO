@@ -21,7 +21,7 @@ import proyecto2so.storage.Disk;
 import proyecto2so.storage.DiskBlock;
 
 /**
- * Handles saving and loading the simulator state without relying on external libraries.
+ * Serializa/deserializa el estado completo del simulador sin librerías externas.
  */
 public class PersistenceService {
 

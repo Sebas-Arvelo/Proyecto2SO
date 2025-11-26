@@ -36,7 +36,7 @@ import proyecto2so.storage.Disk;
 import proyecto2so.storage.DiskBlock;
 
 /**
- * Main Swing window for the simulator.
+ * Ventana principal de Swing: orquesta la interfaz y los eventos de usuario.
  */
 public class MainWindow extends JFrame {
 

@@ -1,7 +1,7 @@
 package proyecto2so.filesystem;
 
 /**
- * Directory node stores children using sibling pointers.
+ * Directorio que administra hijos con punteros entre hermanos.
  */
 public class DirectoryNode extends FileSystemNode {
 

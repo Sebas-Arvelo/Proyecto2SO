@@ -11,6 +11,9 @@ import proyecto2so.storage.BufferManager;
 import proyecto2so.storage.Disk;
 import proyecto2so.ui.MainWindow;
 
+/**
+ * Punto de entrada: inicializa servicios y lanza la interfaz Swing.
+ */
 public class Proyecto2SO {
 
     public static void main(String[] args) {

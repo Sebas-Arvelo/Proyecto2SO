@@ -1,7 +1,7 @@
 package proyecto2so.scheduler;
 
 /**
- * Shortest Seek Time First selection.
+ * SSTF: selecciona la solicitud con menor movimiento del cabezal.
  */
 public class SstfScheduler implements DiskScheduler {
 

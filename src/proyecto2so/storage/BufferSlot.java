@@ -1,7 +1,7 @@
 package proyecto2so.storage;
 
 /**
- * Entry inside the optional buffer cache.
+ * Representa una posición del buffer/caché intermedio.
  */
 public class BufferSlot {
 

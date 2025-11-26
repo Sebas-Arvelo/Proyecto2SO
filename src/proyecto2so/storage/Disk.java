@@ -3,7 +3,7 @@ package proyecto2so.storage;
 import proyecto2so.core.SystemConfig;
 
 /**
- * Simulated disk that stores blocks and handles chained allocation.
+ * Disco lógico: mantiene los bloques y la posición del cabezal.
  */
 public class Disk {
 

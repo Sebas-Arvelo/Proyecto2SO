@@ -3,7 +3,7 @@ package proyecto2so.scheduler;
 import proyecto2so.core.SystemConfig;
 
 /**
- * SCAN (Elevator) sweeps from one end to the other.
+ * SCAN (tipo elevador): barre de un extremo a otro del disco.
  */
 public class ScanScheduler implements DiskScheduler {
 

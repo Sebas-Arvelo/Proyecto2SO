@@ -1,7 +1,7 @@
 package proyecto2so.scheduler;
 
 /**
- * Simple factory to instantiate supported policies.
+ * Devuelve instancias del planificador de disco según el texto de la interfaz.
  */
 public final class SchedulerFactory {
 

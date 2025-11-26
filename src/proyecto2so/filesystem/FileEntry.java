@@ -1,7 +1,7 @@
 package proyecto2so.filesystem;
 
 /**
- * Stores metadata for a file inside the simulated FS.
+ * Guarda los metadatos de un archivo dentro del sistema simulado.
  */
 public class FileEntry extends FileSystemNode {
 

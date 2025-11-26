@@ -1,7 +1,7 @@
 package proyecto2so.process;
 
 /**
- * Minimal representation of a simulated process requesting I/O.
+ * PCB simplificado para rastrear solicitudes y estado del proceso.
  */
 public class ProcessControlBlock {
 

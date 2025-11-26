@@ -3,7 +3,7 @@ package proyecto2so.scheduler;
 import proyecto2so.process.ProcessControlBlock;
 
 /**
- * Wraps a PCB with the target block index to serve.
+ * Agrupa el PCB con el bloque objetivo que debe atender el disco.
  */
 public class DiskRequest {
 

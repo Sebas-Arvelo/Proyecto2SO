@@ -1,7 +1,7 @@
 package proyecto2so.filesystem;
 
 /**
- * Base class with first-child/next-sibling representation to avoid Java collections.
+ * Nodo genérico (archivo o directorio) usando representación hijo/siguiente.
  */
 public abstract class FileSystemNode {
 

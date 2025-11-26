@@ -3,7 +3,7 @@ package proyecto2so.scheduler;
 import proyecto2so.core.SystemConfig;
 
 /**
- * Circular SCAN always moves upward and wraps around to block 0.
+ * C-SCAN: mueve el cabezal en una sola dirección y reinicia en el bloque 0.
  */
 public class CscanScheduler implements DiskScheduler {
 

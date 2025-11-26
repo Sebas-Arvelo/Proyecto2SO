@@ -4,7 +4,7 @@ import proyecto2so.storage.BlockAllocator;
 import proyecto2so.storage.DiskBlock;
 
 /**
- * Coordinates CRUD operations on the simulated file system.
+ * Provee las operaciones CRUD del sistema de archivos y conversa con el disco.
  */
 public class FileSystemService {
 

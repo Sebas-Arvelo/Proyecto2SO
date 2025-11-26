@@ -7,7 +7,7 @@ import proyecto2so.filesystem.FileEntry;
 import proyecto2so.filesystem.FileSystemNode;
 
 /**
- * Table model that shows name, blocks, first block, owner/color for files.
+ * Modelo de la tabla FAT: nombre, bloques, primer bloque y dueño/color.
  */
 public class FileAllocationTableModel extends AbstractTableModel {
 

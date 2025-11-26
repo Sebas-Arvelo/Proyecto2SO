@@ -1,7 +1,7 @@
 package proyecto2so.storage;
 
 /**
- * Represents the linked list of blocks assigned to a file.
+ * Describe la cadena (lista enlazada) de bloques asignados a un archivo.
  */
 public class BlockChain {
 

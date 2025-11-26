@@ -7,7 +7,7 @@ import proyecto2so.storage.Disk;
 import proyecto2so.storage.DiskBlock;
 
 /**
- * Paints the simulated disk blocks in a grid.
+ * Dibuja los bloques del disco en un panel tipo rejilla.
  */
 public class DiskPanel extends JPanel {
 

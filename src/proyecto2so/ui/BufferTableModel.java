@@ -5,7 +5,7 @@ import proyecto2so.storage.BufferManager;
 import proyecto2so.storage.BufferSlot;
 
 /**
- * Shows the current contents of the buffer cache.
+ * Muestra el contenido actual del buffer/caché de bloques.
  */
 public class BufferTableModel extends AbstractTableModel {
 

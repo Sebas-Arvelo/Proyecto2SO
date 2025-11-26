@@ -1,7 +1,7 @@
 package proyecto2so.storage;
 
 /**
- * Represents a single block inside the simulated disk.
+ * Modela un bloque individual dentro del disco simulado.
  */
 public class DiskBlock {
 

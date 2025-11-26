@@ -1,7 +1,7 @@
 package proyecto2so.scheduler;
 
 /**
- * FIFO simply serves the oldest request.
+ * Política FIFO: atiende siempre la solicitud más antigua.
  */
 public class FifoScheduler implements DiskScheduler {
 

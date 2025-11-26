@@ -3,7 +3,7 @@ package proyecto2so.storage;
 import proyecto2so.core.SystemConfig;
 
 /**
- * Simple buffer cache abstraction supporting FIFO/LRU/LFU policies.
+ * Gestiona el buffer/caché intermedio y aplica la política de reemplazo elegida.
  */
 public class BufferManager {
 

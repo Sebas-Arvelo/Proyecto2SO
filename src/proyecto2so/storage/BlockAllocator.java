@@ -1,7 +1,7 @@
 package proyecto2so.storage;
 
 /**
- * Handles chained allocation and release of disk blocks.
+ * Encapsula la lógica de asignación y liberación encadenada de bloques.
  */
 public class BlockAllocator {
 

@@ -1,7 +1,7 @@
 package proyecto2so.core;
 
 /**
- * Centralized configuration knobs for the simulator.
+ * Parametriza el simulador (tamaños máximos, usuarios especiales, etc.).
  */
 public final class SystemConfig {
 

@@ -3,7 +3,7 @@ package proyecto2so.scheduler;
 import proyecto2so.core.SystemConfig;
 
 /**
- * Fixed-size buffer for disk requests.
+ * Cola fija que mantiene las solicitudes pendientes para el planificador de disco.
  */
 public class DiskRequestQueue {
 

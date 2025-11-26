@@ -3,7 +3,7 @@ package proyecto2so.process;
 import proyecto2so.core.SystemConfig;
 
 /**
- * Fixed-size buffer without using Java collections.
+ * Cola fija para PCBs sin colecciones de la librería estándar.
  */
 public class ProcessQueue {
 

@@ -6,7 +6,7 @@ import proyecto2so.process.ProcessControlBlock;
 import proyecto2so.process.ProcessQueue;
 
 /**
- * Displays PCB queue state.
+ * Tabla que refleja el estado actual de la cola de procesos.
  */
 public class ProcessTableModel extends AbstractTableModel {
 
