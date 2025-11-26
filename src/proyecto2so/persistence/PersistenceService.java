@@ -163,7 +163,8 @@ public class PersistenceService {
             } else {
                 FileEntry file = (FileEntry) child;
                 writer.println("FILE|" + encode(childPath) + "|" + encode(file.getOwner()) + "|" + file.getBlockCount()
-                        + "|" + file.getFirstBlockIndex() + "|" + (file.isPublicReadable() ? 1 : 0) + "|" + encode(file.getColorHex()));
+                    + "|" + file.getFirstBlockIndex() + "|" + (file.isPublicReadable() ? 1 : 0) + "|" + encode(file.getColorHex())
+                    + "|" + file.getCreatedByPid());
             }
             child = child.getNextSibling();
         }
@@ -218,16 +219,17 @@ public class PersistenceService {
         if ("DIR".equals(parts[0]) && parts.length >= 2) {
             String path = decode(parts[1]);
             ensureDirectory(path);
-        } else if ("FILE".equals(parts[0]) && parts.length >= 7) {
+        } else if ("FILE".equals(parts[0]) && parts.length >= 8) {
             String path = decode(parts[1]);
             String owner = decode(parts[2]);
             int blocks = parseInt(parts[3]);
             int first = parseInt(parts[4]);
             boolean publicReadable = "1".equals(parts[5]);
             String color = decode(parts[6]);
+            int createdPid = parseInt(parts[7]);
             String parentPath = parentOf(path);
             String name = nameOf(path);
-            fileSystem.addFileFromSnapshot(parentPath, name, owner, first, blocks, publicReadable, color);
+            fileSystem.addFileFromSnapshot(parentPath, name, owner, first, blocks, publicReadable, color, createdPid);
         }
     }
 

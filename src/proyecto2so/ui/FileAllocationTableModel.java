@@ -7,16 +7,16 @@ import proyecto2so.filesystem.FileEntry;
 import proyecto2so.filesystem.FileSystemNode;
 
 /**
- * Modelo de la tabla FAT: nombre, bloques, primer bloque y dueño/color.
+ * Modelo de la tabla FAT: nombre, bloques, primer bloque, dueño, color y proceso.
  */
 public class FileAllocationTableModel extends AbstractTableModel {
 
-    private final String[][] rows = new String[SystemConfig.MAX_BLOCKS][4];
+    private final String[][] rows = new String[SystemConfig.MAX_BLOCKS][6];
     private int rowCount;
 
     public FileAllocationTableModel() {
         for (int i = 0; i < rows.length; i++) {
-            rows[i] = new String[4];
+            rows[i] = new String[6];
         }
     }
 
@@ -36,6 +36,8 @@ public class FileAllocationTableModel extends AbstractTableModel {
             rows[rowCount][1] = String.valueOf(file.getBlockCount());
             rows[rowCount][2] = String.valueOf(file.getFirstBlockIndex());
             rows[rowCount][3] = file.getOwner();
+            rows[rowCount][4] = file.getColorHex();
+            rows[rowCount][5] = file.getCreatedByPid() == -1 ? "-" : String.valueOf(file.getCreatedByPid());
             rowCount++;
         }
         FileSystemNode child = node.getFirstChild();
@@ -52,7 +54,7 @@ public class FileAllocationTableModel extends AbstractTableModel {
 
     @Override
     public int getColumnCount() {
-        return 4;
+        return 6;
     }
 
     @Override
@@ -69,8 +71,12 @@ public class FileAllocationTableModel extends AbstractTableModel {
                 return "Bloques";
             case 2:
                 return "Primer Bloque";
-            default:
+            case 3:
                 return "Propietario";
+            case 4:
+                return "Color";
+            default:
+                return "Proceso";
         }
     }
 }

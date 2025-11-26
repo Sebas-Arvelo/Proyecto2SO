@@ -9,6 +9,7 @@ public class FileEntry extends FileSystemNode {
     private int blockCount;
     private int firstBlockIndex = -1;
     private String colorHex = "#CCCCCC";
+    private int createdByPid = -1;
     private boolean publicReadable = true;
 
     public FileEntry(String id, String name, String owner) {
@@ -47,6 +48,14 @@ public class FileEntry extends FileSystemNode {
 
     public void setColorHex(String colorHex) {
         this.colorHex = colorHex;
+    }
+
+    public int getCreatedByPid() {
+        return createdByPid;
+    }
+
+    public void setCreatedByPid(int createdByPid) {
+        this.createdByPid = createdByPid;
     }
 
     public boolean isPublicReadable() {

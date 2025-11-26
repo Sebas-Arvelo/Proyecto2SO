@@ -2,20 +2,29 @@ package proyecto2so.ui;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField; // Added import for JTextField
 import javax.swing.JTree;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreePath;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import proyecto2so.core.SystemConfig;
 import proyecto2so.filesystem.FileSystemNode;
 import proyecto2so.filesystem.FileSystemService;
@@ -86,31 +95,41 @@ public class MainWindow extends JFrame {
     }
 
     private JPanel buildTopBar() {
-        JPanel panel = new JPanel();
-        panel.add(new JLabel("Modo:"));
-        panel.add(modeSelector);
-        panel.add(new JLabel("Usuario:"));
-        panel.add(userField);
-        panel.add(new JLabel("Planificador:"));
-        panel.add(schedulerSelector);
-        panel.add(new JLabel("Buffer:"));
-        panel.add(bufferPolicySelector);
+        JPanel container = new JPanel(new BorderLayout());
+        JPanel selectors = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+        selectors.add(new JLabel("Modo:"));
+        selectors.add(modeSelector);
+        selectors.add(new JLabel("Usuario:"));
+        selectors.add(userField);
+        selectors.add(new JLabel("Planificador:"));
+        selectors.add(schedulerSelector);
+        selectors.add(new JLabel("Buffer:"));
+        selectors.add(bufferPolicySelector);
+
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
         JButton btnDir = new JButton("Crear Directorio");
         JButton btnFile = new JButton("Crear Archivo");
         JButton btnDelete = new JButton("Eliminar");
         JButton btnRead = new JButton("Leer Archivo");
+        JButton btnEdit = new JButton("Editar Archivo");
         JButton btnRename = new JButton("Renombrar");
         JButton btnSave = new JButton("Guardar");
         JButton btnLoad = new JButton("Cargar");
-        panel.add(btnDir);
-        panel.add(btnFile);
-        panel.add(btnDelete);
-        panel.add(btnRead);
-        panel.add(btnRename);
-        panel.add(btnSave);
-        panel.add(btnLoad);
-        panel.add(diskStatsLabel);
-        panel.add(bufferStatsLabel);
+        JButton btnDataset = new JButton("Dataset CSV");
+        buttons.add(btnDir);
+        buttons.add(btnFile);
+        buttons.add(btnDelete);
+        buttons.add(btnRead);
+        buttons.add(btnEdit);
+        buttons.add(btnRename);
+        buttons.add(btnSave);
+        buttons.add(btnLoad);
+        buttons.add(btnDataset);
+        buttons.add(diskStatsLabel);
+        buttons.add(bufferStatsLabel);
+
+        container.add(selectors, BorderLayout.NORTH);
+        container.add(buttons, BorderLayout.SOUTH);
 
         schedulerSelector.addActionListener(new ActionListener() {
             @Override
@@ -162,6 +181,13 @@ public class MainWindow extends JFrame {
             }
         });
 
+        btnEdit.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                handleEditFile();
+            }
+        });
+
         btnRename.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -183,7 +209,14 @@ public class MainWindow extends JFrame {
             }
         });
 
-        return panel;
+        btnDataset.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                handleLoadDataset();
+            }
+        });
+
+        return container;
     }
 
     private JPanel buildCenter() {
@@ -246,7 +279,11 @@ public class MainWindow extends JFrame {
     }
 
     private void refreshTree() {
-        tree.setModel(buildTreeModel());
+        String previousSelection = getSelectedPath();
+        DefaultTreeModel model = buildTreeModel();
+        tree.setModel(model);
+        expandAll(new TreePath(model.getRoot()));
+        selectPath(previousSelection);
     }
 
     public void refreshAll() {
@@ -287,12 +324,22 @@ public class MainWindow extends JFrame {
             showRestricted();
             return;
         }
-        String parent = prompt("Ruta del directorio padre", "/");
-        if (parent == null) {
+        JTextField parentField = new JTextField(defaultParentPath(), 20);
+        JTextField nameField = new JTextField("nuevo_dir", 20);
+        JPanel panel = new JPanel(new GridLayout(0, 1, 0, 4));
+        panel.add(new JLabel("Ruta del directorio padre"));
+        panel.add(parentField);
+        panel.add(new JLabel("Nombre del nuevo directorio"));
+        panel.add(nameField);
+        int result = JOptionPane.showConfirmDialog(this, panel, "Crear directorio",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result != JOptionPane.OK_OPTION) {
             return;
         }
-        String name = prompt("Nombre del nuevo directorio", "nuevo_dir");
-        if (name == null) {
+        String parent = sanitizeParent(parentField.getText());
+        String name = nameField.getText() == null ? "" : nameField.getText().trim();
+        if (name.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Debe ingresar un nombre");
             return;
         }
         submitProcess(OperationType.MKDIR, joinPath(parent, name), 0, "");
@@ -303,30 +350,44 @@ public class MainWindow extends JFrame {
             showRestricted();
             return;
         }
-        String parent = prompt("Ruta del directorio contenedor", "/");
-        if (parent == null) {
-            return;
-        }
-        String name = prompt("Nombre del archivo", "archivo.txt");
-        if (name == null) {
-            return;
-        }
-        String sizeText = prompt("Tamano en bloques", "1");
-        if (sizeText == null) {
+        JTextField parentField = new JTextField(defaultParentPath(), 20);
+        JTextField nameField = new JTextField("archivo.json", 20);
+        JTextField blocksField = new JTextField("1", 5);
+        JCheckBox publicCheck = new JCheckBox("Lectura publica", true);
+        JTextArea contentArea = new JTextArea("{\n  \"campo\": \"valor\"\n}", 5, 20);
+        contentArea.setLineWrap(true);
+        contentArea.setWrapStyleWord(true);
+        JPanel panel = new JPanel(new BorderLayout(0, 6));
+        JPanel fields = new JPanel(new GridLayout(0, 1, 0, 4));
+        fields.add(new JLabel("Ruta del directorio contenedor"));
+        fields.add(parentField);
+        fields.add(new JLabel("Nombre del archivo"));
+        fields.add(nameField);
+        fields.add(new JLabel("Tamano en bloques"));
+        fields.add(blocksField);
+        fields.add(publicCheck);
+        panel.add(fields, BorderLayout.NORTH);
+        panel.add(new JScrollPane(contentArea), BorderLayout.CENTER);
+        int result = JOptionPane.showConfirmDialog(this, panel, "Crear archivo",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result != JOptionPane.OK_OPTION) {
             return;
         }
         int blocks;
         try {
-            blocks = Integer.parseInt(sizeText);
+            blocks = Integer.parseInt(blocksField.getText().trim());
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Tamano invalido");
             return;
         }
-        boolean isPublic = JOptionPane.showConfirmDialog(this, "Archivo publico?", "Visibilidad",
-            JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION;
-        String content = prompt("Contenido del archivo", "Datos de " + name);
-        String payload = (isPublic ? "PUBLIC:" : "PRIVATE:") + (content == null ? "" : content);
-        submitProcess(OperationType.CREATE, joinPath(parent, name), blocks, payload);
+        String parent = sanitizeParent(parentField.getText());
+        String name = nameField.getText() == null ? "" : nameField.getText().trim();
+        if (name.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Debe ingresar un nombre");
+            return;
+        }
+        String payload = (publicCheck.isSelected() ? "PUBLIC:" : "PRIVATE:") + contentArea.getText();
+        submitProcess(OperationType.CREATE, joinPath(parent, name), Math.max(1, blocks), payload);
     }
 
     private void handleDelete() {
@@ -374,6 +435,45 @@ public class MainWindow extends JFrame {
         submitProcess(OperationType.UPDATE, path, 0, newName);
     }
 
+    private void handleEditFile() {
+        String path = prompt("Ruta del archivo a editar", "/archivo.txt");
+        if (path == null) {
+            return;
+        }
+        FileEntry file = fileSystem.getFile(path);
+        if (file == null) {
+            JOptionPane.showMessageDialog(this, "El archivo no existe");
+            return;
+        }
+        if (!canEdit(file)) {
+            showRestricted();
+            return;
+        }
+        JTextArea area = new JTextArea(fileSystem.readFileData(file), 10, 40);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setCaretPosition(0);
+        JCheckBox publicCheck = new JCheckBox("Permitir lectura publica", file.isPublicReadable());
+        JPanel meta = new JPanel(new GridLayout(0, 1, 0, 2));
+        meta.add(new JLabel("Propietario: " + file.getOwner()));
+        meta.add(new JLabel("PID creador: " + file.getCreatedByPid()));
+        meta.add(new JLabel("Color FAT: " + file.getColorHex()));
+        meta.add(new JLabel("Bloques asignados: " + file.getBlockCount()));
+        JPanel editor = new JPanel(new BorderLayout(0, 8));
+        editor.add(meta, BorderLayout.NORTH);
+        editor.add(new JScrollPane(area), BorderLayout.CENTER);
+        editor.add(publicCheck, BorderLayout.SOUTH);
+        int result = JOptionPane.showConfirmDialog(this, editor, "Editar archivo", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result != JOptionPane.OK_OPTION) {
+            return;
+        }
+        boolean ok = fileSystem.updateFileContent(path, area.getText(), publicCheck.isSelected());
+        JOptionPane.showMessageDialog(this, ok ? "Archivo actualizado" : "No se pudo actualizar el archivo");
+        if (ok) {
+            refreshAll();
+        }
+    }
+
     private void handleSaveSnapshot() {
         String path = prompt("Ruta de guardado", "snapshot.txt");
         if (path == null) {
@@ -396,6 +496,96 @@ public class MainWindow extends JFrame {
         pidSequence = Math.max(pidSequence, maxPid + 1);
         refreshAll();
         JOptionPane.showMessageDialog(this, "Estado cargado correctamente");
+    }
+
+    private void handleLoadDataset() {
+        File dataset = new File(System.getProperty("user.dir"), "datasets/demo.csv");
+        if (!dataset.exists()) {
+            JOptionPane.showMessageDialog(this, "No se encontro datasets/demo.csv");
+            return;
+        }
+        int[] result = loadDatasetFromCsv(dataset);
+        StringBuilder message = new StringBuilder();
+        message.append("Directorios creados: ").append(result[0])
+                .append("\nArchivos creados: ").append(result[1]);
+        if (result[2] > 0) {
+            message.append("\nLineas con error: ").append(result[2]);
+        }
+        JOptionPane.showMessageDialog(this, message.toString());
+        refreshAll();
+    }
+
+    private int[] loadDatasetFromCsv(File file) {
+        int createdDirs = 0;
+        int createdFiles = 0;
+        int failures = 0;
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(file));
+            String line;
+            boolean headerConsumed = false;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("#")) {
+                    continue;
+                }
+                if (!headerConsumed) {
+                    headerConsumed = true;
+                    continue;
+                }
+                String[] columns = line.split(",", 6);
+                if (columns.length < 3) {
+                    failures++;
+                    continue;
+                }
+                String type = columns[0].trim().toUpperCase();
+                String parent = columns[1].trim();
+                String name = columns[2].trim();
+                if (type.equals("DIR")) {
+                    if (fileSystem.createDirectory(parent, name) != null) {
+                        createdDirs++;
+                    } else {
+                        failures++;
+                    }
+                } else if (type.equals("FILE")) {
+                    int blocks = 1;
+                    boolean publicReadable = true;
+                    String content = "";
+                    if (columns.length > 3 && !columns[3].trim().isEmpty()) {
+                        try {
+                            blocks = Integer.parseInt(columns[3].trim());
+                        } catch (NumberFormatException ex) {
+                            blocks = 1;
+                        }
+                    }
+                    if (columns.length > 4 && !columns[4].trim().isEmpty()) {
+                        publicReadable = Boolean.parseBoolean(columns[4].trim());
+                    }
+                    if (columns.length > 5) {
+                        content = columns[5];
+                    }
+                    if (fileSystem.createFile(parent, name, Math.max(1, blocks), SystemConfig.ROOT_USER,
+                            publicReadable, content, 0) != null) {
+                        createdFiles++;
+                    } else {
+                        failures++;
+                    }
+                } else {
+                    failures++;
+                }
+            }
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "Error leyendo CSV: " + ex.getMessage());
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException ex) {
+                    // ignore
+                }
+            }
+        }
+        return new int[]{createdDirs, createdFiles, failures};
     }
 
     private void submitProcess(OperationType op, String path, int blocks, String payload) {
@@ -500,7 +690,7 @@ public class MainWindow extends JFrame {
         } else {
             content = payload;
         }
-        return fileSystem.createFile(parent, name, Math.max(1, pcb.getRequestedBlocks()), pcb.getOwner(), isPublic, content) != null;
+        return fileSystem.createFile(parent, name, Math.max(1, pcb.getRequestedBlocks()), pcb.getOwner(), isPublic, content, pcb.getPid()) != null;
     }
 
     private boolean performRead(ProcessControlBlock pcb) {
@@ -569,6 +759,98 @@ public class MainWindow extends JFrame {
         return parent + "/" + name;
     }
 
+    private String sanitizeParent(String raw) {
+        if (raw == null || raw.trim().isEmpty()) {
+            return "/";
+        }
+        String cleaned = raw.trim().replace('\\', '/');
+        if (!cleaned.startsWith("/")) {
+            cleaned = "/" + cleaned;
+        }
+        if (cleaned.length() > 1 && cleaned.endsWith("/")) {
+            cleaned = cleaned.substring(0, cleaned.length() - 1);
+        }
+        return cleaned.isEmpty() ? "/" : cleaned;
+    }
+
+    private String defaultParentPath() {
+        String selected = getSelectedPath();
+        return selected == null ? "/" : selected;
+    }
+
+    private String getSelectedPath() {
+        TreePath selection = tree.getSelectionPath();
+        if (selection == null) {
+            return "/";
+        }
+        Object[] nodes = selection.getPath();
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < nodes.length; i++) {
+            String segment = nodes[i].toString();
+            if ("/".equals(segment)) {
+                if (builder.length() == 0) {
+                    builder.append('/');
+                }
+            } else {
+                if (builder.length() > 1) {
+                    builder.append('/');
+                } else if (builder.length() == 0) {
+                    builder.append('/');
+                }
+                builder.append(segment);
+            }
+        }
+        return builder.length() == 0 ? "/" : builder.toString();
+    }
+
+    private void expandAll(TreePath parent) {
+        if (parent == null) {
+            return;
+        }
+        DefaultMutableTreeNode node = (DefaultMutableTreeNode) parent.getLastPathComponent();
+        for (int i = 0; i < node.getChildCount(); i++) {
+            expandAll(parent.pathByAddingChild(node.getChildAt(i)));
+        }
+        tree.expandPath(parent);
+    }
+
+    private void selectPath(String logicalPath) {
+        if (logicalPath == null || logicalPath.isEmpty()) {
+            tree.setSelectionRow(0);
+            return;
+        }
+        String normalized = sanitizeParent(logicalPath);
+        if ("/".equals(normalized)) {
+            tree.setSelectionRow(0);
+            return;
+        }
+        String[] parts = normalized.substring(1).split("/");
+        DefaultMutableTreeNode node = (DefaultMutableTreeNode) tree.getModel().getRoot();
+        TreePath path = new TreePath(node);
+        for (int i = 0; i < parts.length; i++) {
+            node = findChild(node, parts[i]);
+            if (node == null) {
+                break;
+            }
+            path = path.pathByAddingChild(node);
+        }
+        tree.setSelectionPath(path);
+        tree.scrollPathToVisible(path);
+    }
+
+    private DefaultMutableTreeNode findChild(DefaultMutableTreeNode parent, String name) {
+        if (parent == null) {
+            return null;
+        }
+        for (int i = 0; i < parent.getChildCount(); i++) {
+            DefaultMutableTreeNode child = (DefaultMutableTreeNode) parent.getChildAt(i);
+            if (name.equalsIgnoreCase(child.getUserObject().toString())) {
+                return child;
+            }
+        }
+        return null;
+    }
+
     private boolean isAdmin() {
         return modeSelector.getSelectedIndex() == 0;
     }
@@ -603,5 +885,12 @@ public class MainWindow extends JFrame {
         }
         String currentUser = getCurrentUser();
         return file.isPublicReadable() || file.getOwner().equalsIgnoreCase(currentUser);
+    }
+
+    private boolean canEdit(FileEntry file) {
+        if (file == null) {
+            return false;
+        }
+        return isAdmin() || file.getOwner().equalsIgnoreCase(getCurrentUser());
     }
 }

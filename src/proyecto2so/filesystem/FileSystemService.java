@@ -1,5 +1,6 @@
 package proyecto2so.filesystem;
 
+import proyecto2so.core.SystemConfig;
 import proyecto2so.storage.BlockAllocator;
 import proyecto2so.storage.DiskBlock;
 
@@ -51,14 +52,34 @@ public class FileSystemService {
     }
 
     private String[] normalize(String path) {
-        String trimmed = path.trim();
-        if (trimmed.startsWith("/")) {
+        if (path == null) {
+            return new String[0];
+        }
+        String trimmed = path.trim().replace('\\', '/');
+        while (trimmed.startsWith("/")) {
             trimmed = trimmed.substring(1);
+        }
+        while (trimmed.endsWith("/") && trimmed.length() > 0) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
         }
         if (trimmed.isEmpty()) {
             return new String[0];
         }
-        return trimmed.split("/");
+        String[] raw = trimmed.split("/");
+        int nonEmpty = 0;
+        for (int i = 0; i < raw.length; i++) {
+            if (!raw[i].isEmpty()) {
+                nonEmpty++;
+            }
+        }
+        String[] cleaned = new String[nonEmpty];
+        int index = 0;
+        for (int i = 0; i < raw.length; i++) {
+            if (!raw[i].isEmpty()) {
+                cleaned[index++] = raw[i];
+            }
+        }
+        return cleaned;
     }
 
     public DirectoryNode createDirectory(String parentPath, String dirName) {
@@ -72,7 +93,7 @@ public class FileSystemService {
     }
 
     public FileEntry createFile(String parentPath, String fileName, int blocksNeeded, String owner,
-            boolean publicReadable, String content) {
+            boolean publicReadable, String content, int createdByPid) {
         DirectoryNode parent = asDirectory(findNode(parentPath));
         if (parent == null || parent.findChildByName(fileName) != null) {
             return null;
@@ -85,13 +106,31 @@ public class FileSystemService {
         file.setBlockCount(blocksNeeded);
         file.setFirstBlockIndex(headIndex);
         file.setPublicReadable(publicReadable);
+        file.setCreatedByPid(createdByPid);
+        file.setColorHex(colorFromId(file.getId()));
         writeContentToBlocks(file, content != null ? content : defaultContent(fileName));
         parent.addChild(file);
         return file;
     }
 
+    public boolean updateFileContent(String path, String newContent, boolean publicReadable) {
+        FileEntry file = getFile(path);
+        if (file == null) {
+            return false;
+        }
+        String content = newContent == null ? "" : newContent;
+        int requiredBlocks = Math.max(1,
+                (int) Math.ceil((double) Math.max(1, content.length()) / SystemConfig.BLOCK_SIZE_BYTES));
+        if (!ensureBlockCount(file, requiredBlocks)) {
+            return false;
+        }
+        writeContentToBlocks(file, content);
+        file.setPublicReadable(publicReadable);
+        return true;
+    }
+
     public FileEntry addFileFromSnapshot(String parentPath, String fileName, String owner, int firstBlock,
-            int blockCount, boolean publicReadable, String colorHex) {
+            int blockCount, boolean publicReadable, String colorHex, int createdByPid) {
         DirectoryNode parent = asDirectory(findNode(parentPath));
         if (parent == null) {
             return null;
@@ -103,8 +142,11 @@ public class FileSystemService {
         file.setFirstBlockIndex(firstBlock);
         file.setBlockCount(blockCount);
         file.setPublicReadable(publicReadable);
+        file.setCreatedByPid(createdByPid);
         if (colorHex != null && !colorHex.isEmpty()) {
             file.setColorHex(colorHex);
+        } else {
+            file.setColorHex(colorFromId(file.getId()));
         }
         parent.addChild(file);
         return file;
@@ -198,20 +240,102 @@ public class FileSystemService {
     }
 
     private void writeContentToBlocks(FileEntry file, String content) {
+        if (file == null || file.getFirstBlockIndex() == -1) {
+            return;
+        }
+        String safeContent = content == null ? "" : content;
+        int chunkSize = Math.max(1, SystemConfig.BLOCK_SIZE_BYTES);
         int cursor = file.getFirstBlockIndex();
-        int blockNumber = 1;
+        int offset = 0;
         while (cursor != -1) {
             DiskBlock block = allocator.getDisk().getBlock(cursor);
             if (block == null) {
                 break;
             }
-            block.setData(content + "#" + blockNumber);
+            String segment;
+            if (offset >= safeContent.length()) {
+                segment = "";
+            } else {
+                int end = Math.min(safeContent.length(), offset + chunkSize);
+                segment = safeContent.substring(offset, end);
+            }
+            block.setData(segment);
+            offset += chunkSize;
             cursor = block.getNextIndex();
-            blockNumber++;
+        }
+    }
+
+    private boolean ensureBlockCount(FileEntry file, int newBlockCount) {
+        if (file.getFirstBlockIndex() == -1) {
+            int head = allocator.allocateChain(file.getId(), newBlockCount);
+            if (head == -1) {
+                return false;
+            }
+            file.setFirstBlockIndex(head);
+            file.setBlockCount(newBlockCount);
+            return true;
+        }
+        int current = Math.max(1, file.getBlockCount());
+        if (newBlockCount == current) {
+            return true;
+        }
+        if (newBlockCount < current) {
+            truncateChain(file, newBlockCount);
+            file.setBlockCount(newBlockCount);
+            return true;
+        }
+        int extraNeeded = newBlockCount - current;
+        int extensionHead = allocator.allocateChain(file.getId(), extraNeeded);
+        if (extensionHead == -1) {
+            return false;
+        }
+        appendChain(file, extensionHead);
+        file.setBlockCount(newBlockCount);
+        return true;
+    }
+
+    private void truncateChain(FileEntry file, int keepBlocks) {
+        int cursor = file.getFirstBlockIndex();
+        int remaining = keepBlocks;
+        DiskBlock lastKept = null;
+        while (cursor != -1 && remaining > 0) {
+            lastKept = allocator.getDisk().getBlock(cursor);
+            cursor = lastKept != null ? lastKept.getNextIndex() : -1;
+            remaining--;
+        }
+        if (lastKept == null) {
+            return;
+        }
+        int tailHead = lastKept.getNextIndex();
+        lastKept.setNextIndex(-1);
+        allocator.releaseChain(tailHead);
+    }
+
+    private void appendChain(FileEntry file, int newChainHead) {
+        if (file.getFirstBlockIndex() == -1) {
+            file.setFirstBlockIndex(newChainHead);
+            return;
+        }
+        int cursor = file.getFirstBlockIndex();
+        DiskBlock last = null;
+        while (cursor != -1) {
+            last = allocator.getDisk().getBlock(cursor);
+            cursor = (last != null) ? last.getNextIndex() : -1;
+        }
+        if (last != null) {
+            last.setNextIndex(newChainHead);
         }
     }
 
     private String defaultContent(String fileName) {
         return "Contenido de " + fileName;
+    }
+
+    private String colorFromId(String value) {
+        int hash = Math.abs(value.hashCode());
+        int r = (hash >> 16) & 0xFF;
+        int g = (hash >> 8) & 0xFF;
+        int b = hash & 0xFF;
+        return String.format("#%02X%02X%02X", r, g, b);
     }
 }

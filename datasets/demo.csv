@@ -1,0 +1,7 @@
+type,parent,name,blocks,public,content
+DIR,/,docs,,,
+DIR,/docs,reportes,,,
+DIR,/docs,manuales,,,
+FILE,/docs/manuales,manual.json,2,true,{"version":"1.0","descripcion":"Manual general"}
+FILE,/docs/reportes,reporte_interno.csv,1,false,"mes,ingresos\nenero,1200\nfebrero,1500"
+FILE,/docs/reportes,reporte_publico.csv,1,true,"mes,ventas\nenero,300\nfebrero,450"

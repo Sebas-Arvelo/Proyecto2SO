@@ -13,22 +13,25 @@ public class ProcessTableModel extends AbstractTableModel {
     private final String[][] rows = new String[SystemConfig.MAX_PROCESSES][5];
     private int rowCount;
 
-    public ProcessTableModel() {
-        for (int i = 0; i < rows.length; i++) {
-            rows[i] = new String[4];
-        }
-    }
-
     public void updateFrom(ProcessQueue queue) {
         rowCount = 0;
-        for (int i = 0; i < queue.size(); i++) {
+        int limit = Math.min(queue.size(), rows.length);
+        for (int i = 0; i < limit; i++) {
             ProcessControlBlock pcb = queue.get(i);
+            if (pcb == null) {
+                continue;
+            }
             rows[i][0] = String.valueOf(pcb.getPid());
             rows[i][1] = pcb.getOperation().name();
             rows[i][2] = pcb.getState().name();
             rows[i][3] = pcb.getTargetPath();
             rows[i][4] = pcb.getPayload();
             rowCount++;
+        }
+        for (int i = limit; i < rows.length; i++) {
+            for (int j = 0; j < rows[i].length; j++) {
+                rows[i][j] = null;
+            }
         }
         fireTableDataChanged();
     }
