@@ -9,6 +9,7 @@ import java.awt.event.ActionListener;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JCheckBox;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -475,20 +476,27 @@ public class MainWindow extends JFrame {
     }
 
     private void handleSaveSnapshot() {
-        String path = prompt("Ruta de guardado", "snapshot.txt");
-        if (path == null) {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Guardar snapshot");
+        chooser.setSelectedFile(new File("snapshot.txt"));
+        int option = chooser.showSaveDialog(this);
+        if (option != JFileChooser.APPROVE_OPTION) {
             return;
         }
-        boolean ok = persistence.save(path);
+        File file = chooser.getSelectedFile();
+        boolean ok = persistence.save(file.getAbsolutePath());
         JOptionPane.showMessageDialog(this, ok ? "Estado guardado" : "No se pudo guardar el archivo");
     }
 
     private void handleLoadSnapshot() {
-        String path = prompt("Ruta del archivo a cargar", "snapshot.txt");
-        if (path == null) {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Cargar snapshot");
+        int option = chooser.showOpenDialog(this);
+        if (option != JFileChooser.APPROVE_OPTION) {
             return;
         }
-        int maxPid = persistence.load(path);
+        File file = chooser.getSelectedFile();
+        int maxPid = persistence.load(file.getAbsolutePath());
         if (maxPid == -1) {
             JOptionPane.showMessageDialog(this, "No se pudo cargar el archivo");
             return;
